@@ -1,1 +1,2 @@
 ffmpeg
+chmod +x ffmpeg/ffmpeg
