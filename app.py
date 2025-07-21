@@ -1,7 +1,5 @@
 import sys
 import types
-sys.modules['pyaudioop'] = types.SimpleNamespace()
-
 import streamlit as st
 from pydub import AudioSegment
 import os
