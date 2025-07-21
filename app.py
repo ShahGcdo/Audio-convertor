@@ -6,34 +6,16 @@ import streamlit as st
 from pydub import AudioSegment
 import os
 import tempfile
-import platform
 
-# Detect OS
-current_os = platform.system()
+# ✅ Streamlit Cloud uses system ffmpeg/ffprobe — no custom paths needed
 
-# Optional local ffmpeg setup
-USE_LOCAL_BINARIES = os.path.exists("ffmpeg")
-
-if USE_LOCAL_BINARIES:
-    if current_os == "Windows":
-        ffmpeg_path = os.path.join("ffmpeg", "ffmpeg.exe")
-        ffprobe_path = os.path.join("ffmpeg", "ffprobe.exe")
-    else:
-        ffmpeg_path = os.path.join("ffmpeg", "ffmpeg")
-        ffprobe_path = os.path.join("ffmpeg", "ffprobe")
-
-    AudioSegment.converter = ffmpeg_path
-    AudioSegment.ffprobe = ffprobe_path
-    st.write(f"🔧 Using local ffmpeg: `{ffmpeg_path}`")
-else:
-    st.write("ℹ️ Using system-installed ffmpeg/ffprobe")
-
-# Pitch map
+# Voice pitch map
 pitch_map = {
     "Man to Woman": 4,
     "Woman to Man": -4,
-    "Baby Voice": 6,
-    "Deep Voice": -6
+    "Child Girl to Child Boy": -1,
+    "Child Boy to Child Girl": 1,
+    "Child to Big Adult": -6,
 }
 
 def change_pitch(audio_segment, semitones):
@@ -42,9 +24,9 @@ def change_pitch(audio_segment, semitones):
     return pitched.set_frame_rate(44100)
 
 # UI
-st.set_page_config(page_title="🎙️ Voice Changer AI")
-st.title("🎙️ Voice Changer AI")
-st.markdown("Upload an MP3 or WAV, apply a voice style, and download the converted MP3.")
+st.set_page_config(page_title="🎙️ Voice Converter")
+st.title("🎙️ Voice Converter")
+st.markdown("Upload an MP3 or WAV file, apply a voice transformation, and download the result.")
 
 uploaded_file = st.file_uploader("📤 Upload audio file", type=["mp3", "wav"])
 voice_style = st.selectbox("🎚️ Select Voice Style", list(pitch_map.keys()))
@@ -58,24 +40,23 @@ if uploaded_file:
     try:
         audio = AudioSegment.from_file(temp_path)
     except Exception as e:
-        st.error("❌ Could not load audio. Ensure ffmpeg and ffprobe are available.")
+        st.error("❌ Could not load audio. Make sure ffmpeg/ffprobe are available.")
         st.exception(e)
         st.stop()
 
     st.subheader("🎧 Original Audio")
     st.audio(temp_path)
 
-    shifted = change_pitch(audio, pitch_map[voice_style])
-    output_path = os.path.join(tempfile.gettempdir(), "converted_voice.mp3")
-
     try:
+        shifted = change_pitch(audio, pitch_map[voice_style])
+        output_path = os.path.join(tempfile.gettempdir(), "converted_voice.mp3")
         shifted.export(output_path, format="mp3")
     except Exception as e:
-        st.error("❌ Could not export MP3. Check ffmpeg binary and permissions.")
+        st.error("❌ Conversion or export failed.")
         st.exception(e)
         st.stop()
 
-    st.subheader("✅ Converted MP3")
+    st.subheader("✅ Converted Audio")
     st.audio(output_path)
     with open(output_path, "rb") as f:
         st.download_button("⬇️ Download MP3", f, file_name="converted_voice.mp3")
