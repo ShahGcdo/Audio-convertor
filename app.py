@@ -7,9 +7,19 @@ import streamlit as st
 from pydub import AudioSegment
 import os
 import tempfile
+import platform
 
-# 🔧 Use local ffmpeg binary (Windows: use "ffmpeg.exe")
-ffmpeg_path = os.path.join("ffmpeg", "ffmpeg")
+# ✅ Detect OS and set ffmpeg path accordingly
+current_os = platform.system()
+if current_os == "Windows":
+    ffmpeg_path = os.path.join("ffmpeg", "ffmpeg.exe")
+else:
+    ffmpeg_path = os.path.join("ffmpeg", "ffmpeg")
+
+# Show which ffmpeg path is being used
+st.write(f"🔧 Using ffmpeg binary at: `{ffmpeg_path}`")
+
+# 🔧 Assign ffmpeg binary to pydub
 AudioSegment.converter = ffmpeg_path
 
 # Voice pitch mapping
@@ -30,8 +40,8 @@ st.set_page_config(page_title="🎙️ Voice Changer AI")
 st.title("🎙️ Voice Changer AI")
 st.markdown("Upload an MP3 or WAV, apply a voice style, and download the converted MP3.")
 
-uploaded_file = st.file_uploader("Upload audio file", type=["mp3", "wav"])
-voice_style = st.selectbox("Select Voice Style", list(pitch_map.keys()))
+uploaded_file = st.file_uploader("📤 Upload audio file", type=["mp3", "wav"])
+voice_style = st.selectbox("🎚️ Select Voice Style", list(pitch_map.keys()))
 
 if uploaded_file:
     suffix = ".mp3" if uploaded_file.name.endswith(".mp3") else ".wav"
@@ -41,8 +51,9 @@ if uploaded_file:
 
     try:
         audio = AudioSegment.from_file(temp_path)
-    except Exception:
-        st.error("❌ Could not load audio. Check ffmpeg setup.")
+    except Exception as e:
+        st.error("❌ Could not load audio. Check ffmpeg setup and file format.")
+        st.exception(e)
         st.stop()
 
     st.subheader("🎧 Original Audio")
@@ -53,8 +64,9 @@ if uploaded_file:
 
     try:
         shifted.export(output_path, format="mp3")
-    except Exception:
-        st.error("❌ Could not export MP3. Check ffmpeg binary.")
+    except Exception as e:
+        st.error("❌ Could not export MP3. Check ffmpeg binary and write permissions.")
+        st.exception(e)
         st.stop()
 
     st.subheader("✅ Converted MP3")
