@@ -1,4 +1,3 @@
-# ✅ Patch to avoid missing 'audioop' module (in Python 3.12+ or cloud)
 import sys
 import types
 sys.modules['pyaudioop'] = types.SimpleNamespace()
@@ -9,20 +8,27 @@ import os
 import tempfile
 import platform
 
-# ✅ Detect OS and set ffmpeg path accordingly
+# Detect OS
 current_os = platform.system()
-if current_os == "Windows":
-    ffmpeg_path = os.path.join("ffmpeg", "ffmpeg.exe")
+
+# Optional local ffmpeg setup
+USE_LOCAL_BINARIES = os.path.exists("ffmpeg")
+
+if USE_LOCAL_BINARIES:
+    if current_os == "Windows":
+        ffmpeg_path = os.path.join("ffmpeg", "ffmpeg.exe")
+        ffprobe_path = os.path.join("ffmpeg", "ffprobe.exe")
+    else:
+        ffmpeg_path = os.path.join("ffmpeg", "ffmpeg")
+        ffprobe_path = os.path.join("ffmpeg", "ffprobe")
+
+    AudioSegment.converter = ffmpeg_path
+    AudioSegment.ffprobe = ffprobe_path
+    st.write(f"🔧 Using local ffmpeg: `{ffmpeg_path}`")
 else:
-    ffmpeg_path = os.path.join("ffmpeg", "ffmpeg")
+    st.write("ℹ️ Using system-installed ffmpeg/ffprobe")
 
-# Show which ffmpeg path is being used
-st.write(f"🔧 Using ffmpeg binary at: `{ffmpeg_path}`")
-
-# 🔧 Assign ffmpeg binary to pydub
-AudioSegment.converter = ffmpeg_path
-
-# Voice pitch mapping
+# Pitch map
 pitch_map = {
     "Man to Woman": 4,
     "Woman to Man": -4,
@@ -31,11 +37,11 @@ pitch_map = {
 }
 
 def change_pitch(audio_segment, semitones):
-    new_sample_rate = int(audio_segment.frame_rate * (2.0 ** (semitones / 12.0)))
-    pitched = audio_segment._spawn(audio_segment.raw_data, overrides={'frame_rate': new_sample_rate})
+    new_rate = int(audio_segment.frame_rate * (2.0 ** (semitones / 12.0)))
+    pitched = audio_segment._spawn(audio_segment.raw_data, overrides={'frame_rate': new_rate})
     return pitched.set_frame_rate(44100)
 
-# 🎙️ Streamlit UI
+# UI
 st.set_page_config(page_title="🎙️ Voice Changer AI")
 st.title("🎙️ Voice Changer AI")
 st.markdown("Upload an MP3 or WAV, apply a voice style, and download the converted MP3.")
@@ -52,7 +58,7 @@ if uploaded_file:
     try:
         audio = AudioSegment.from_file(temp_path)
     except Exception as e:
-        st.error("❌ Could not load audio. Check ffmpeg setup and file format.")
+        st.error("❌ Could not load audio. Ensure ffmpeg and ffprobe are available.")
         st.exception(e)
         st.stop()
 
@@ -65,7 +71,7 @@ if uploaded_file:
     try:
         shifted.export(output_path, format="mp3")
     except Exception as e:
-        st.error("❌ Could not export MP3. Check ffmpeg binary and write permissions.")
+        st.error("❌ Could not export MP3. Check ffmpeg binary and permissions.")
         st.exception(e)
         st.stop()
 
