@@ -13,12 +13,13 @@ pitch_map = {
     "Child to Big Adult": -6,
 }
 
+# Properly fixed pitch shift function (librosa 0.10+ compatible)
 def shift_pitch_librosa(input_path, output_path, n_steps):
-    y, sr = librosa.load(input_path, sr=None)
-    y_shifted = librosa.effects.pitch_shift(y, sr, n_steps=n_steps)
+    y, sr = librosa.load(path=input_path, sr=None)
+    y_shifted = librosa.effects.pitch_shift(y=y, sr=sr, n_steps=n_steps)
     sf.write(output_path, y_shifted, sr)
 
-# UI
+# Streamlit UI
 st.set_page_config(page_title="🎙️ Voice Converter")
 st.title("🎙️ Voice Converter")
 st.markdown("Upload an MP3 or WAV file, apply a voice transformation, and download the result.")
