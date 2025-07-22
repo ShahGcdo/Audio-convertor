@@ -1,13 +1,10 @@
-import sys
-import types
 import streamlit as st
-from pydub import AudioSegment
 import os
 import tempfile
+import librosa
+import soundfile as sf
 
-# ✅ Streamlit Cloud uses system ffmpeg/ffprobe — no custom paths needed
-
-# Voice pitch map
+# Voice pitch map (in semitones)
 pitch_map = {
     "Man to Woman": 4,
     "Woman to Man": -4,
@@ -16,10 +13,10 @@ pitch_map = {
     "Child to Big Adult": -6,
 }
 
-def change_pitch(audio_segment, semitones):
-    new_rate = int(audio_segment.frame_rate * (2.0 ** (semitones / 12.0)))
-    pitched = audio_segment._spawn(audio_segment.raw_data, overrides={'frame_rate': new_rate})
-    return pitched.set_frame_rate(44100)
+def shift_pitch_librosa(input_path, output_path, n_steps):
+    y, sr = librosa.load(input_path, sr=None)
+    y_shifted = librosa.effects.pitch_shift(y, sr, n_steps=n_steps)
+    sf.write(output_path, y_shifted, sr)
 
 # UI
 st.set_page_config(page_title="🎙️ Voice Converter")
@@ -35,26 +32,18 @@ if uploaded_file:
         tmp.write(uploaded_file.read())
         temp_path = tmp.name
 
-    try:
-        audio = AudioSegment.from_file(temp_path)
-    except Exception as e:
-        st.error("❌ Could not load audio. Make sure ffmpeg/ffprobe are available.")
-        st.exception(e)
-        st.stop()
-
     st.subheader("🎧 Original Audio")
     st.audio(temp_path)
 
     try:
-        shifted = change_pitch(audio, pitch_map[voice_style])
-        output_path = os.path.join(tempfile.gettempdir(), "converted_voice.mp3")
-        shifted.export(output_path, format="mp3")
+        output_path = os.path.join(tempfile.gettempdir(), "converted_voice.wav")
+        shift_pitch_librosa(temp_path, output_path, pitch_map[voice_style])
     except Exception as e:
-        st.error("❌ Conversion or export failed.")
+        st.error("❌ Conversion failed.")
         st.exception(e)
         st.stop()
 
     st.subheader("✅ Converted Audio")
     st.audio(output_path)
     with open(output_path, "rb") as f:
-        st.download_button("⬇️ Download MP3", f, file_name="converted_voice.mp3")
+        st.download_button("⬇️ Download WAV", f, file_name="converted_voice.wav")
