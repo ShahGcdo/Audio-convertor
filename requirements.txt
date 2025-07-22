@@ -1,3 +1,2 @@
-streamlit
-librosa
-soundfile
+sox
+ffmpeg
