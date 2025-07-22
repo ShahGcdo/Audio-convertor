@@ -10,9 +10,15 @@ voice_presets = {
 }
 
 def convert_voice_sox(input_path, output_path, pitch_cents):
-    # Use sox to shift pitch while preserving tempo
+    # Convert to WAV first if input is MP3 (sox may not support MP3)
+    wav_input = input_path
+    if input_path.endswith(".mp3"):
+        wav_input = input_path.replace(".mp3", "_converted.wav")
+        subprocess.run(["ffmpeg", "-y", "-i", input_path, wav_input], check=True)
+
+    # Run sox pitch shift
     subprocess.run([
-        "sox", input_path, output_path,
+        "sox", wav_input, output_path,
         "pitch", str(pitch_cents)
     ], check=True)
 
